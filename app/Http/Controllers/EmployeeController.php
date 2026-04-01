@@ -2,98 +2,89 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreEmployeeRequest;
+use App\Http\Requests\UpdateEmployeeRequest;
+use App\Http\Resources\EmployeeResource;
 use App\Models\Employee;
-use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 class EmployeeController extends Controller
 {
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
         $this->authorize('viewAny', Employee::class);
 
-        $employees = Employee::query()
-            ->with(['department', 'user'])
-            ->latest()
-            ->paginate(15);
-
-        return response()->json($employees);
-    }
-
-    public function store(Request $request): JsonResponse
-    {
-        $this->authorize('create', Employee::class);
-
-        $validated = $request->validate([
-            'user_id' => [
-                'required',
-                'integer',
-                'unique:employees,user_id',
-                Rule::exists('users', 'id')->where(
-                    fn ($query) => $query->where('role', User::ROLE_EMPLOYEE)
-                ),
-            ],
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:employees,email'],
-            'phone' => ['required', 'string', 'max:30'],
-            'address' => ['required', 'string'],
-            'position' => ['required', 'string', 'max:255'],
-            'department_id' => ['required', 'integer', Rule::exists('departments', 'id')],
-            'hire_date' => ['required', 'date'],
-            'contract_type' => ['required', 'string', 'max:255'],
-            'status' => ['sometimes', Rule::in([Employee::STATUS_ACTIVE, Employee::STATUS_INACTIVE])],
+        $filters = $request->validate([
+            'search' => ['nullable', 'string', 'max:255'],
+            'department_id' => ['nullable', 'integer', 'exists:departments,id'],
+            'status' => ['nullable', 'string', Rule::in([Employee::STATUS_ACTIVE, Employee::STATUS_INACTIVE])],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
-        $employee = Employee::create($validated);
+        $employees = Employee::query()
+            ->with(['department', 'user'])
+            ->search($filters['search'] ?? null)
+            ->forDepartment($filters['department_id'] ?? null)
+            ->withStatus($filters['status'] ?? null)
+            ->orderBy('name')
+            ->paginate($filters['per_page'] ?? 15)
+            ->withQueryString();
 
-        return response()->json($employee->load(['department', 'user']), 201);
+        return EmployeeResource::collection($employees)
+            ->additional([
+                'message' => 'Employees retrieved successfully.',
+                'filters' => [
+                    'search' => $filters['search'] ?? null,
+                    'department_id' => isset($filters['department_id']) ? (int) $filters['department_id'] : null,
+                    'status' => $filters['status'] ?? null,
+                ],
+            ])
+            ->response();
+    }
+
+    public function store(StoreEmployeeRequest $request): JsonResponse
+    {
+        $employee = Employee::query()->create($request->validated());
+
+        return $this->employeeResponse($employee, 'Employee created successfully.', 201);
     }
 
     public function show(Employee $employee): JsonResponse
     {
         $this->authorize('view', $employee);
 
-        return response()->json($employee->load(['department', 'user']));
+        return $this->employeeResponse($employee, 'Employee retrieved successfully.');
     }
 
-    public function update(Request $request, Employee $employee): JsonResponse
+    public function update(UpdateEmployeeRequest $request, Employee $employee): JsonResponse
     {
-        $this->authorize('update', $employee);
+        $employee->update($request->validated());
 
-        $validated = $request->validate([
-            'name' => ['sometimes', 'required', 'string', 'max:255'],
-            'email' => [
-                'sometimes',
-                'required',
-                'string',
-                'email',
-                'max:255',
-                Rule::unique('employees', 'email')->ignore($employee->id),
-            ],
-            'phone' => ['sometimes', 'required', 'string', 'max:30'],
-            'address' => ['sometimes', 'required', 'string'],
-            'position' => ['sometimes', 'required', 'string', 'max:255'],
-            'department_id' => ['sometimes', 'required', 'integer', Rule::exists('departments', 'id')],
-            'hire_date' => ['sometimes', 'required', 'date'],
-            'contract_type' => ['sometimes', 'required', 'string', 'max:255'],
-            'status' => ['sometimes', 'required', Rule::in([Employee::STATUS_ACTIVE, Employee::STATUS_INACTIVE])],
-        ]);
-
-        $employee->update($validated);
-
-        return response()->json($employee->fresh()->load(['department', 'user']));
+        return $this->employeeResponse($employee->fresh(), 'Employee updated successfully.');
     }
 
-    public function destroy(Employee $employee): JsonResponse
+    public function deactivate(Employee $employee): JsonResponse
     {
-        $this->authorize('delete', $employee);
+        $this->authorize('deactivate', $employee);
 
-        $employee->delete();
+        if ($employee->status === Employee::STATUS_INACTIVE) {
+            return $this->employeeResponse($employee, 'Employee is already inactive.');
+        }
 
-        return response()->json([
-            'message' => 'Employee deleted successfully.',
+        $employee->update([
+            'status' => Employee::STATUS_INACTIVE,
         ]);
+
+        return $this->employeeResponse($employee->fresh(), 'Employee deactivated successfully.');
+    }
+
+    private function employeeResponse(Employee $employee, string $message, int $status = 200): JsonResponse
+    {
+        return EmployeeResource::make($employee->loadMissing(['department', 'user']))
+            ->additional(['message' => $message])
+            ->response()
+            ->setStatusCode($status);
     }
 }

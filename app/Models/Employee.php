@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -21,7 +22,7 @@ class Employee extends Model
     protected $fillable = [
         'user_id',
         'name',
-        'email',
+        'professional_email',
         'phone',
         'address',
         'position',
@@ -51,5 +52,37 @@ class Employee extends Model
     public function department(): BelongsTo
     {
         return $this->belongsTo(Department::class);
+    }
+
+    public function scopeSearch(Builder $query, ?string $search): Builder
+    {
+        if (blank($search)) {
+            return $query;
+        }
+
+        return $query->where(function (Builder $employeeQuery) use ($search): void {
+            $employeeQuery
+                ->where('name', 'like', "%{$search}%")
+                ->orWhere('professional_email', 'like', "%{$search}%")
+                ->orWhere('phone', 'like', "%{$search}%");
+        });
+    }
+
+    public function scopeForDepartment(Builder $query, null|int|string $departmentId): Builder
+    {
+        if (blank($departmentId)) {
+            return $query;
+        }
+
+        return $query->where('department_id', $departmentId);
+    }
+
+    public function scopeWithStatus(Builder $query, ?string $status): Builder
+    {
+        if (blank($status)) {
+            return $query;
+        }
+
+        return $query->where('status', $status);
     }
 }

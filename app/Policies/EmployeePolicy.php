@@ -32,8 +32,13 @@ class EmployeePolicy
         return $user->hasAnyRole([User::ROLE_ADMIN, User::ROLE_HR]);
     }
 
+    public function deactivate(User $user, Employee $employee): bool
+    {
+        return $this->update($user, $employee);
+    }
+
     public function delete(User $user, Employee $employee): bool
     {
-        return $user->hasRole(User::ROLE_ADMIN);
+        return false;
     }
 }

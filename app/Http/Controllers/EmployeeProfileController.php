@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\EmployeeResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -17,6 +18,10 @@ class EmployeeProfileController extends Controller
 
         $this->authorize('view', $employee);
 
-        return response()->json($employee->load(['department', 'user']));
+        return EmployeeResource::make($employee->loadMissing(['department', 'user']))
+            ->additional([
+                'message' => 'Employee profile retrieved successfully.',
+            ])
+            ->response();
     }
 }

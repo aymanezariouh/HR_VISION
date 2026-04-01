@@ -15,16 +15,18 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', [AuthController::class, 'user']);
+    Route::get('/employees/{employee}', [EmployeeController::class, 'show']);
 
     Route::prefix('admin')->middleware('role:admin')->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'admin']);
-        Route::delete('/employees/{employee}', [EmployeeController::class, 'destroy']);
     });
 
     Route::prefix('hr')->middleware('role:admin,hr')->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'hr']);
         Route::apiResource('employees', EmployeeController::class)
-            ->only(['index', 'store', 'show', 'update']);
+            ->only(['index', 'store', 'update']);
+        Route::patch('/employees/{employee}/deactivate', [EmployeeController::class, 'deactivate'])
+            ->name('employees.deactivate');
     });
 
     Route::prefix('employee')->middleware('role:employee')->group(function () {
