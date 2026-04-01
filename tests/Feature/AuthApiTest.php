@@ -15,6 +15,8 @@ class AuthApiTest extends TestCase
         $response = $this->postJson('/api/register', [
             'name' => 'Ayman',
             'email' => 'ayman@example.com',
+            'phone' => '0601234567',
+            'role' => User::ROLE_HR,
             'password' => 'password',
             'password_confirmation' => 'password',
         ]);
@@ -23,13 +25,15 @@ class AuthApiTest extends TestCase
             ->assertCreated()
             ->assertJsonStructure([
                 'message',
-                'user' => ['id', 'name', 'email'],
+                'user' => ['id', 'name', 'email', 'phone', 'role'],
                 'token',
                 'token_type',
             ]);
 
         $this->assertDatabaseHas('users', [
             'email' => 'ayman@example.com',
+            'phone' => '0601234567',
+            'role' => User::ROLE_HR,
         ]);
     }
 
