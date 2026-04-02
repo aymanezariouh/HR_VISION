@@ -23,5 +23,7 @@ class DatabaseSeeder extends Seeder
             'phone' => '0600000000',
             'role' => User::ROLE_ADMIN,
         ]);
+
+        $this->call(ExpenseCategorySeeder::class);
     }
 }

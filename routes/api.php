@@ -4,6 +4,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\EmployeeProfileController;
+use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\SalaryController;
 use Illuminate\Support\Facades\Route;
 
@@ -27,9 +28,14 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::patch('/employees/{employee}/deactivate', [EmployeeController::class, 'deactivate'])
             ->name('employees.deactivate');
         Route::post('/salaries', [SalaryController::class, 'store']);
+        Route::get('/expenses/pending', [ExpenseController::class, 'pending']);
+        Route::patch('/expenses/{expense}/approve', [ExpenseController::class, 'approve']);
+        Route::patch('/expenses/{expense}/reject', [ExpenseController::class, 'reject']);
     });
 
     Route::prefix('employee')->middleware('role:employee')->group(function () {
         Route::get('/profile', [EmployeeProfileController::class, 'show']);
+        Route::get('/expenses', [ExpenseController::class, 'myExpenses']);
+        Route::post('/expenses', [ExpenseController::class, 'store']);
     });
 });
