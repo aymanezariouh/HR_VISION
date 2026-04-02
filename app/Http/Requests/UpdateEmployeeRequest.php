@@ -40,7 +40,14 @@ class UpdateEmployeeRequest extends FormRequest
             'phone' => ['sometimes', 'required', 'string', 'max:30'],
             'address' => ['sometimes', 'required', 'string'],
             'position' => ['sometimes', 'required', 'string', 'max:255'],
-            'department_id' => ['sometimes', 'required', 'integer', Rule::exists('departments', 'id')],
+            'department_id' => [
+                'sometimes',
+                'required',
+                'integer',
+                Rule::exists('departments', 'id')->where(
+                    fn ($query) => $query->where('is_active', true)
+                ),
+            ],
             'hire_date' => ['sometimes', 'required', 'date'],
             'contract_type' => ['sometimes', 'required', 'string', 'max:255'],
             'status' => ['sometimes', 'required', Rule::in([Employee::STATUS_ACTIVE, Employee::STATUS_INACTIVE])],

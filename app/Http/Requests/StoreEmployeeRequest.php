@@ -42,7 +42,13 @@ class StoreEmployeeRequest extends FormRequest
             'phone' => ['required', 'string', 'max:30'],
             'address' => ['required', 'string'],
             'position' => ['required', 'string', 'max:255'],
-            'department_id' => ['required', 'integer', Rule::exists('departments', 'id')],
+            'department_id' => [
+                'required',
+                'integer',
+                Rule::exists('departments', 'id')->where(
+                    fn ($query) => $query->where('is_active', true)
+                ),
+            ],
             'hire_date' => ['required', 'date'],
             'contract_type' => ['required', 'string', 'max:255'],
             'status' => ['required', Rule::in([Employee::STATUS_ACTIVE, Employee::STATUS_INACTIVE])],

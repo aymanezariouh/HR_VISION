@@ -58,6 +58,10 @@ class AuthController extends Controller
             return $this->errorResponse('Invalid credentials.', null, 401);
         }
 
+        if (! $user->is_active) {
+            return $this->errorResponse('Account is inactive.', null, 403);
+        }
+
         $token = $user->createToken($validated['device_name'] ?? 'api-token')->plainTextToken;
 
         return $this->successResponse([

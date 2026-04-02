@@ -20,6 +20,15 @@ class User extends Authenticatable
     public const ROLE_EMPLOYEE = 'employee';
 
     /**
+     * The model's default values for attributes.
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'is_active' => true,
+    ];
+
+    /**
      * The attributes that are mass assignable.
      *
      * @var list<string>
@@ -29,6 +38,7 @@ class User extends Authenticatable
         'email',
         'phone',
         'role',
+        'is_active',
         'password',
     ];
 
@@ -51,6 +61,7 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'is_active' => 'boolean',
             'password' => 'hashed',
         ];
     }

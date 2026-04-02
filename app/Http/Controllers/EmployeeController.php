@@ -5,13 +5,37 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreEmployeeRequest;
 use App\Http\Requests\UpdateEmployeeRequest;
 use App\Http\Resources\EmployeeResource;
+use App\Models\Department;
 use App\Models\Employee;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 class EmployeeController extends Controller
 {
+    public function options(): JsonResponse
+    {
+        $this->authorize('viewAny', Employee::class);
+
+        $departments = Department::query()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        $availableUsers = User::query()
+            ->where('role', User::ROLE_EMPLOYEE)
+            ->where('is_active', true)
+            ->whereDoesntHave('employee')
+            ->orderBy('name')
+            ->get(['id', 'name', 'email']);
+
+        return $this->successResponse([
+            'departments' => $departments,
+            'employee_users' => $availableUsers,
+        ], 'Employee form options retrieved successfully.');
+    }
+
     public function index(Request $request): JsonResponse
     {
         $this->authorize('viewAny', Employee::class);

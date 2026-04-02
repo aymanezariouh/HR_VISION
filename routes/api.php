@@ -1,5 +1,8 @@
 <?php
 
+use App\Http\Controllers\AdminDepartmentController;
+use App\Http\Controllers\AdminExpenseCategoryController;
+use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DocumentController;
@@ -22,10 +25,25 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::prefix('admin')->middleware('role:admin')->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'admin']);
+        Route::get('/users', [AdminUserController::class, 'index']);
+        Route::get('/users/{user}', [AdminUserController::class, 'show']);
+        Route::patch('/users/{user}', [AdminUserController::class, 'update']);
+        Route::patch('/users/{user}/deactivate', [AdminUserController::class, 'deactivate']);
+        Route::get('/departments', [AdminDepartmentController::class, 'index']);
+        Route::post('/departments', [AdminDepartmentController::class, 'store']);
+        Route::patch('/departments/{department}', [AdminDepartmentController::class, 'update']);
+        Route::patch('/departments/{department}/deactivate', [AdminDepartmentController::class, 'deactivate']);
+        Route::delete('/departments/{department}', [AdminDepartmentController::class, 'destroy']);
+        Route::get('/expense-categories', [AdminExpenseCategoryController::class, 'index']);
+        Route::post('/expense-categories', [AdminExpenseCategoryController::class, 'store']);
+        Route::patch('/expense-categories/{expenseCategory}', [AdminExpenseCategoryController::class, 'update']);
+        Route::patch('/expense-categories/{expenseCategory}/deactivate', [AdminExpenseCategoryController::class, 'deactivate']);
+        Route::delete('/expense-categories/{expenseCategory}', [AdminExpenseCategoryController::class, 'destroy']);
     });
 
     Route::prefix('hr')->middleware('role:admin,hr')->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'hr']);
+        Route::get('/employee-options', [EmployeeController::class, 'options']);
         Route::apiResource('employees', EmployeeController::class)
             ->only(['index', 'store', 'update']);
         Route::patch('/employees/{employee}/deactivate', [EmployeeController::class, 'deactivate'])

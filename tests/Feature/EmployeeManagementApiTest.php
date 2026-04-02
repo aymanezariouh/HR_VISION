@@ -171,6 +171,47 @@ class EmployeeManagementApiTest extends TestCase
             ->assertJsonPath('data.items.0.id', $employee->id);
     }
 
+    public function test_hr_can_get_employee_form_options(): void
+    {
+        $hrUser = User::factory()->create([
+            'role' => User::ROLE_HR,
+        ]);
+        $activeDepartment = Department::query()->create([
+            'name' => 'Engineering',
+            'is_active' => true,
+        ]);
+        Department::query()->create([
+            'name' => 'Archived Department',
+            'is_active' => false,
+        ]);
+
+        $availableUser = User::factory()->create([
+            'role' => User::ROLE_EMPLOYEE,
+            'is_active' => true,
+        ]);
+        $assignedUser = User::factory()->create([
+            'role' => User::ROLE_EMPLOYEE,
+            'is_active' => true,
+        ]);
+        $inactiveUser = User::factory()->create([
+            'role' => User::ROLE_EMPLOYEE,
+            'is_active' => false,
+        ]);
+
+        $this->createEmployee($assignedUser, $activeDepartment);
+
+        Sanctum::actingAs($hrUser);
+
+        $this->getJson('/api/hr/employee-options')
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('message', 'Employee form options retrieved successfully.')
+            ->assertJsonCount(1, 'data.departments')
+            ->assertJsonPath('data.departments.0.id', $activeDepartment->id)
+            ->assertJsonCount(1, 'data.employee_users')
+            ->assertJsonPath('data.employee_users.0.id', $availableUser->id);
+    }
+
     public function test_employee_can_only_view_their_own_employee_record(): void
     {
         $department = Department::query()->create([
