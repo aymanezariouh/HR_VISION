@@ -4,6 +4,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\EmployeeProfileController;
+use App\Http\Controllers\SalaryController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/register', [AuthController::class, 'register']);
@@ -13,6 +14,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', [AuthController::class, 'user']);
     Route::get('/employees/{employee}', [EmployeeController::class, 'show']);
+    Route::get('/employees/{employee}/salaries', [SalaryController::class, 'index']);
 
     Route::prefix('admin')->middleware('role:admin')->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'admin']);
@@ -24,6 +26,7 @@ Route::middleware('auth:sanctum')->group(function () {
             ->only(['index', 'store', 'update']);
         Route::patch('/employees/{employee}/deactivate', [EmployeeController::class, 'deactivate'])
             ->name('employees.deactivate');
+        Route::post('/salaries', [SalaryController::class, 'store']);
     });
 
     Route::prefix('employee')->middleware('role:employee')->group(function () {
