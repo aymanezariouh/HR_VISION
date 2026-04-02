@@ -65,6 +65,11 @@ class Employee extends Model
         return $this->hasMany(Expense::class);
     }
 
+    public function documents(): HasMany
+    {
+        return $this->hasMany(Document::class);
+    }
+
     public function scopeSearch(Builder $query, ?string $search): Builder
     {
         if (blank($search)) {

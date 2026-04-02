@@ -3,8 +3,10 @@
 namespace App\Providers;
 
 use App\Models\Employee;
+use App\Models\Document;
 use App\Models\Expense;
 use App\Models\Salary;
+use App\Policies\DocumentPolicy;
 use App\Policies\EmployeePolicy;
 use App\Policies\ExpensePolicy;
 use App\Policies\SalaryPolicy;
@@ -21,6 +23,7 @@ class AuthServiceProvider extends ServiceProvider
         Employee::class => EmployeePolicy::class,
         Salary::class => SalaryPolicy::class,
         Expense::class => ExpensePolicy::class,
+        Document::class => DocumentPolicy::class,
     ];
 
     /**
