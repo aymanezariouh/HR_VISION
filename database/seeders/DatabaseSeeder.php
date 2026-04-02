@@ -15,15 +15,18 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
-
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-            'phone' => '0600000000',
-            'role' => User::ROLE_ADMIN,
-        ]);
+        User::query()->updateOrCreate(
+            ['email' => 'test@example.com'],
+            [
+                'name' => 'Test User',
+                'phone' => '0600000000',
+                'role' => User::ROLE_ADMIN,
+                'password' => 'password',
+                'is_active' => true,
+            ]
+        );
 
         $this->call(ExpenseCategorySeeder::class);
+        $this->call(EmployeeTestDataSeeder::class);
     }
 }
