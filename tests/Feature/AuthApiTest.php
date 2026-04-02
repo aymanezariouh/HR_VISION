@@ -23,11 +23,20 @@ class AuthApiTest extends TestCase
 
         $response
             ->assertCreated()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('message', 'User registered successfully.')
+            ->assertJsonPath('data.user.email', 'ayman@example.com')
+            ->assertJsonPath('data.user.phone', '0601234567')
+            ->assertJsonPath('data.user.role', User::ROLE_HR)
+            ->assertJsonPath('data.token_type', 'Bearer')
             ->assertJsonStructure([
+                'success',
+                'data' => [
+                    'user' => ['id', 'name', 'email', 'phone', 'role'],
+                    'token',
+                    'token_type',
+                ],
                 'message',
-                'user' => ['id', 'name', 'email', 'phone', 'role'],
-                'token',
-                'token_type',
             ]);
 
         $this->assertDatabaseHas('users', [
@@ -50,11 +59,18 @@ class AuthApiTest extends TestCase
 
         $response
             ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('message', 'Login successful.')
+            ->assertJsonPath('data.user.id', $user->id)
+            ->assertJsonPath('data.token_type', 'Bearer')
             ->assertJsonStructure([
+                'success',
+                'data' => [
+                    'user' => ['id', 'name', 'email', 'phone', 'role'],
+                    'token',
+                    'token_type',
+                ],
                 'message',
-                'user' => ['id', 'name', 'email'],
-                'token',
-                'token_type',
             ]);
     }
 
@@ -68,10 +84,26 @@ class AuthApiTest extends TestCase
 
         $response
             ->assertOk()
-            ->assertJson([
-                'message' => 'Logged out successfully.',
-            ]);
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data', null)
+            ->assertJsonPath('message', 'Logged out successfully.');
 
         $this->assertDatabaseCount('personal_access_tokens', 0);
+    }
+
+    public function test_authenticated_user_can_fetch_current_user_with_bearer_token(): void
+    {
+        $user = User::factory()->create();
+        $token = $user->createToken('frontend-token')->plainTextToken;
+
+        $response = $this->withHeader('Authorization', 'Bearer '.$token)
+            ->getJson('/api/user');
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.id', $user->id)
+            ->assertJsonPath('data.email', $user->email)
+            ->assertJsonPath('message', 'Authenticated user retrieved successfully.');
     }
 }

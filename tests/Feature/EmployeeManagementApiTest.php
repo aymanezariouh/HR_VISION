@@ -56,6 +56,7 @@ class EmployeeManagementApiTest extends TestCase
 
         $response
             ->assertCreated()
+            ->assertJsonPath('success', true)
             ->assertJsonPath('message', 'Employee created successfully.')
             ->assertJsonPath('data.professional_email', 'mina.doe@hrvision.test')
             ->assertJsonPath('data.department_id', $department->id)
@@ -116,13 +117,14 @@ class EmployeeManagementApiTest extends TestCase
 
         $response
             ->assertOk()
+            ->assertJsonPath('success', true)
             ->assertJsonPath('message', 'Employees retrieved successfully.')
-            ->assertJsonPath('filters.search', 'amine')
-            ->assertJsonPath('filters.department_id', $engineering->id)
-            ->assertJsonPath('filters.status', Employee::STATUS_ACTIVE)
-            ->assertJsonCount(1, 'data')
-            ->assertJsonPath('data.0.id', $matchingEmployee->id)
-            ->assertJsonPath('data.0.professional_email', 'amine@hrvision.test');
+            ->assertJsonPath('data.filters.search', 'amine')
+            ->assertJsonPath('data.filters.department_id', $engineering->id)
+            ->assertJsonPath('data.filters.status', Employee::STATUS_ACTIVE)
+            ->assertJsonCount(1, 'data.items')
+            ->assertJsonPath('data.items.0.id', $matchingEmployee->id)
+            ->assertJsonPath('data.items.0.professional_email', 'amine@hrvision.test');
     }
 
     public function test_employee_index_supports_search_by_professional_email_and_phone(): void
@@ -158,13 +160,15 @@ class EmployeeManagementApiTest extends TestCase
 
         $this->getJson('/api/hr/employees?search=nada.support@hrvision.test')
             ->assertOk()
-            ->assertJsonCount(1, 'data')
-            ->assertJsonPath('data.0.id', $employee->id);
+            ->assertJsonPath('success', true)
+            ->assertJsonCount(1, 'data.items')
+            ->assertJsonPath('data.items.0.id', $employee->id);
 
         $this->getJson('/api/hr/employees?search=0677777777')
             ->assertOk()
-            ->assertJsonCount(1, 'data')
-            ->assertJsonPath('data.0.id', $employee->id);
+            ->assertJsonPath('success', true)
+            ->assertJsonCount(1, 'data.items')
+            ->assertJsonPath('data.items.0.id', $employee->id);
     }
 
     public function test_employee_can_only_view_their_own_employee_record(): void
@@ -194,7 +198,8 @@ class EmployeeManagementApiTest extends TestCase
             ->assertJsonPath('data.professional_email', 'owner@hrvision.test');
 
         $this->getJson('/api/employees/'.$otherEmployee->id)
-            ->assertForbidden();
+            ->assertForbidden()
+            ->assertJsonPath('success', false);
     }
 
     public function test_admin_can_view_any_employee_record(): void
@@ -251,6 +256,7 @@ class EmployeeManagementApiTest extends TestCase
 
         $this->patchJson('/api/hr/employees/'.$employee->id.'/deactivate')
             ->assertOk()
+            ->assertJsonPath('success', true)
             ->assertJsonPath('message', 'Employee deactivated successfully.')
             ->assertJsonPath('data.status', Employee::STATUS_INACTIVE);
 
@@ -277,18 +283,23 @@ class EmployeeManagementApiTest extends TestCase
         Sanctum::actingAs($employeeUser);
 
         $this->getJson('/api/hr/employees')
-            ->assertForbidden();
+            ->assertForbidden()
+            ->assertJsonPath('success', false)
+            ->assertJsonPath('message', 'You are not authorized to access this resource.');
 
         $this->postJson('/api/hr/employees', [])
-            ->assertForbidden();
+            ->assertForbidden()
+            ->assertJsonPath('success', false);
 
         $this->patchJson('/api/hr/employees/'.$targetEmployee->id, [
             'position' => 'Blocked Update',
         ])
-            ->assertForbidden();
+            ->assertForbidden()
+            ->assertJsonPath('success', false);
 
         $this->patchJson('/api/hr/employees/'.$targetEmployee->id.'/deactivate')
-            ->assertForbidden();
+            ->assertForbidden()
+            ->assertJsonPath('success', false);
     }
 
     private function createEmployee(User $user, Department $department, array $overrides = []): Employee

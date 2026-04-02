@@ -18,10 +18,9 @@ class EmployeeProfileController extends Controller
 
         $this->authorize('view', $employee);
 
-        return EmployeeResource::make($employee->loadMissing(['department', 'user']))
-            ->additional([
-                'message' => 'Employee profile retrieved successfully.',
-            ])
-            ->response();
+        return $this->successResponse(
+            EmployeeResource::make($employee->loadMissing(['department', 'user']))->resolve(),
+            'Employee profile retrieved successfully.'
+        );
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\UserResource;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -36,12 +37,11 @@ class AuthController extends Controller
 
         $token = $user->createToken($validated['device_name'] ?? 'api-token')->plainTextToken;
 
-        return response()->json([
-            'message' => 'User registered successfully.',
-            'user' => $user,
+        return $this->successResponse([
+            'user' => UserResource::make($user)->resolve(),
             'token' => $token,
             'token_type' => 'Bearer',
-        ], 201);
+        ], 'User registered successfully.', 201);
     }
 
     public function login(Request $request): JsonResponse
@@ -55,32 +55,30 @@ class AuthController extends Controller
         $user = User::where('email', $validated['email'])->first();
 
         if (! $user || ! Hash::check($validated['password'], $user->password)) {
-            return response()->json([
-                'message' => 'Invalid credentials.',
-            ], 401);
+            return $this->errorResponse('Invalid credentials.', null, 401);
         }
 
         $token = $user->createToken($validated['device_name'] ?? 'api-token')->plainTextToken;
 
-        return response()->json([
-            'message' => 'Login successful.',
-            'user' => $user,
+        return $this->successResponse([
+            'user' => UserResource::make($user)->resolve(),
             'token' => $token,
             'token_type' => 'Bearer',
-        ]);
+        ], 'Login successful.');
     }
 
     public function logout(Request $request): JsonResponse
     {
         $request->user()->currentAccessToken()?->delete();
 
-        return response()->json([
-            'message' => 'Logged out successfully.',
-        ]);
+        return $this->successResponse(null, 'Logged out successfully.');
     }
 
     public function user(Request $request): JsonResponse
     {
-        return response()->json($request->user());
+        return $this->successResponse(
+            UserResource::make($request->user())->resolve(),
+            'Authenticated user retrieved successfully.'
+        );
     }
 }

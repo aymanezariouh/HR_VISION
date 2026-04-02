@@ -32,16 +32,22 @@ class EmployeeController extends Controller
             ->paginate($filters['per_page'] ?? 15)
             ->withQueryString();
 
-        return EmployeeResource::collection($employees)
-            ->additional([
-                'message' => 'Employees retrieved successfully.',
-                'filters' => [
-                    'search' => $filters['search'] ?? null,
-                    'department_id' => isset($filters['department_id']) ? (int) $filters['department_id'] : null,
-                    'status' => $filters['status'] ?? null,
-                ],
-            ])
-            ->response();
+        return $this->successResponse([
+            'items' => EmployeeResource::collection($employees->getCollection())->resolve(),
+            'pagination' => [
+                'current_page' => $employees->currentPage(),
+                'last_page' => $employees->lastPage(),
+                'per_page' => $employees->perPage(),
+                'total' => $employees->total(),
+                'from' => $employees->firstItem(),
+                'to' => $employees->lastItem(),
+            ],
+            'filters' => [
+                'search' => $filters['search'] ?? null,
+                'department_id' => isset($filters['department_id']) ? (int) $filters['department_id'] : null,
+                'status' => $filters['status'] ?? null,
+            ],
+        ], 'Employees retrieved successfully.');
     }
 
     public function store(StoreEmployeeRequest $request): JsonResponse
@@ -82,9 +88,10 @@ class EmployeeController extends Controller
 
     private function employeeResponse(Employee $employee, string $message, int $status = 200): JsonResponse
     {
-        return EmployeeResource::make($employee->loadMissing(['department', 'user']))
-            ->additional(['message' => $message])
-            ->response()
-            ->setStatusCode($status);
+        return $this->successResponse(
+            EmployeeResource::make($employee->loadMissing(['department', 'user']))->resolve(),
+            $message,
+            $status
+        );
     }
 }
