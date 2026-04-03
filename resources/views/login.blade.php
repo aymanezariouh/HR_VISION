@@ -13,6 +13,12 @@
             <h1>Sign in to HRVision</h1>
             <p class="muted-text">Use your account email and password to open the dashboard.</p>
 
+            @if(session('success'))
+                <div class="success-box">
+                    {{ session('success') }}
+                </div>
+            @endif
+
             @if($errors->any())
                 <div class="error-box">
                     {{ $errors->first() }}

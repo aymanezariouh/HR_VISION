@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Department;
+use App\Models\Document;
 use App\Models\Employee;
 use App\Models\Expense;
 use App\Models\ExpenseCategory;
@@ -64,6 +65,19 @@ class BladeAppTest extends TestCase
 
         $response->assertRedirect(route('login'));
         $response->assertSessionHasErrors('email');
+        $this->assertGuest();
+    }
+
+    public function test_user_can_logout_and_see_success_message_on_login_page(): void
+    {
+        $user = User::factory()->create(['role' => 'admin']);
+
+        $response = $this->actingAs($user)->post(route('logout'));
+
+        $response->assertRedirect(route('login'));
+        $this->followRedirects($response)
+            ->assertOk()
+            ->assertSee('You have been logged out successfully.');
         $this->assertGuest();
     }
 
@@ -157,6 +171,20 @@ class BladeAppTest extends TestCase
         $this->actingAs($user)
             ->get(route('blade.employees.index'))
             ->assertForbidden();
+    }
+
+    public function test_employee_dashboard_only_shows_employee_navigation_links(): void
+    {
+        $employeeUser = User::factory()->create(['role' => 'employee']);
+
+        $this->actingAs($employeeUser)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('Salaries')
+            ->assertSee('Expenses')
+            ->assertSee('Documents')
+            ->assertDontSee('href="'.route('blade.employees.index').'"', false)
+            ->assertDontSee('href="'.route('admin.index').'"', false);
     }
 
     public function test_hr_can_create_salary_from_blade_page(): void
@@ -407,5 +435,261 @@ class BladeAppTest extends TestCase
             'id' => $expense->id,
             'status' => Expense::STATUS_APPROVED,
         ]);
+    }
+
+    public function test_hr_can_upload_and_view_employee_documents_in_blade(): void
+    {
+        Storage::fake('public');
+
+        $hrUser = User::factory()->create(['role' => 'hr']);
+        $department = Department::create(['name' => 'HR']);
+        $employee = Employee::create([
+            'user_id' => User::factory()->create(['role' => 'employee'])->id,
+            'department_id' => $department->id,
+            'name' => 'Document Employee',
+            'professional_email' => 'document.employee@example.com',
+            'phone' => '+212600000011',
+            'address' => 'Casablanca',
+            'position' => 'Assistant',
+            'hire_date' => '2026-04-01',
+            'contract_type' => 'cdi',
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($hrUser)
+            ->get(route('blade.documents.create'))
+            ->assertOk()
+            ->assertSee('Upload Document');
+
+        $this->actingAs($hrUser)
+            ->post(route('blade.documents.store'), [
+                'employee_id' => $employee->id,
+                'title' => 'Work Contract',
+                'type' => 'contract',
+                'file' => UploadedFile::fake()->create('contract.pdf', 200, 'application/pdf'),
+            ])
+            ->assertRedirect(route('blade.documents.index', ['employee_id' => $employee->id]));
+
+        $document = Document::first();
+
+        $this->assertNotNull($document);
+        Storage::disk('public')->assertExists($document->file_path);
+
+        $this->actingAs($hrUser)
+            ->get(route('blade.documents.index', ['employee_id' => $employee->id]))
+            ->assertOk()
+            ->assertSee('Work Contract')
+            ->assertSee('contract');
+    }
+
+    public function test_employee_can_view_only_their_own_documents_and_download_them_in_blade(): void
+    {
+        Storage::fake('public');
+
+        $department = Department::create(['name' => 'Legal']);
+
+        $employeeUser = User::factory()->create(['role' => 'employee']);
+        $employee = Employee::create([
+            'user_id' => $employeeUser->id,
+            'department_id' => $department->id,
+            'name' => 'Own Document Employee',
+            'professional_email' => 'own.document@example.com',
+            'phone' => '+212600000012',
+            'address' => 'Rabat',
+            'position' => 'Officer',
+            'hire_date' => '2026-04-01',
+            'contract_type' => 'cdi',
+            'status' => 'active',
+        ]);
+
+        $otherEmployee = Employee::create([
+            'user_id' => User::factory()->create(['role' => 'employee'])->id,
+            'department_id' => $department->id,
+            'name' => 'Other Document Employee',
+            'professional_email' => 'other.document@example.com',
+            'phone' => '+212600000013',
+            'address' => 'Rabat',
+            'position' => 'Officer',
+            'hire_date' => '2026-04-01',
+            'contract_type' => 'cdi',
+            'status' => 'active',
+        ]);
+
+        Storage::disk('public')->put('employee-documents/own.pdf', 'my document');
+        Storage::disk('public')->put('employee-documents/other.pdf', 'other document');
+
+        $ownDocument = Document::create([
+            'employee_id' => $employee->id,
+            'title' => 'My Certificate',
+            'type' => 'certificate',
+            'file_path' => 'employee-documents/own.pdf',
+            'uploaded_at' => now(),
+        ]);
+
+        $otherDocument = Document::create([
+            'employee_id' => $otherEmployee->id,
+            'title' => 'Other Certificate',
+            'type' => 'certificate',
+            'file_path' => 'employee-documents/other.pdf',
+            'uploaded_at' => now(),
+        ]);
+
+        $this->actingAs($employeeUser)
+            ->get(route('blade.documents.mine'))
+            ->assertOk()
+            ->assertSee('My Certificate')
+            ->assertDontSee('Other Certificate');
+
+        $this->actingAs($employeeUser)
+            ->get(route('blade.documents.download', $ownDocument))
+            ->assertOk();
+
+        $this->actingAs($employeeUser)
+            ->get(route('blade.documents.download', $otherDocument))
+            ->assertForbidden();
+    }
+
+    public function test_admin_can_update_and_deactivate_users_from_blade_pages(): void
+    {
+        $adminUser = User::factory()->create(['role' => 'admin']);
+        $targetUser = User::factory()->create([
+            'role' => 'employee',
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($adminUser)
+            ->get(route('blade.admin.users.index'))
+            ->assertOk()
+            ->assertSee($targetUser->email);
+
+        $this->actingAs($adminUser)
+            ->get(route('blade.admin.users.edit', $targetUser))
+            ->assertOk()
+            ->assertSee('Edit User Role');
+
+        $this->actingAs($adminUser)
+            ->patch(route('blade.admin.users.update', $targetUser), [
+                'role' => 'hr',
+            ])
+            ->assertRedirect(route('blade.admin.users.index'));
+
+        $this->assertDatabaseHas('users', [
+            'id' => $targetUser->id,
+            'role' => 'hr',
+        ]);
+
+        $this->actingAs($adminUser)
+            ->patch(route('blade.admin.users.deactivate', $targetUser))
+            ->assertRedirect(route('blade.admin.users.index'));
+
+        $this->assertDatabaseHas('users', [
+            'id' => $targetUser->id,
+            'is_active' => false,
+        ]);
+    }
+
+    public function test_admin_can_manage_departments_from_blade_pages(): void
+    {
+        $adminUser = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($adminUser)
+            ->get(route('blade.admin.departments.index'))
+            ->assertOk()
+            ->assertSee('Departments');
+
+        $this->actingAs($adminUser)
+            ->post(route('blade.admin.departments.store'), [
+                'name' => 'Administration',
+            ])
+            ->assertRedirect(route('blade.admin.departments.index'));
+
+        $department = Department::where('name', 'Administration')->first();
+
+        $this->assertNotNull($department);
+
+        $this->actingAs($adminUser)
+            ->get(route('blade.admin.departments.edit', $department))
+            ->assertOk()
+            ->assertSee('Edit Department');
+
+        $this->actingAs($adminUser)
+            ->put(route('blade.admin.departments.update', $department), [
+                'name' => 'General Administration',
+            ])
+            ->assertRedirect(route('blade.admin.departments.index'));
+
+        $this->actingAs($adminUser)
+            ->patch(route('blade.admin.departments.deactivate', $department))
+            ->assertRedirect(route('blade.admin.departments.index'));
+
+        $department->refresh();
+
+        $this->assertSame('General Administration', $department->name);
+        $this->assertFalse($department->is_active);
+
+        $this->actingAs($adminUser)
+            ->delete(route('blade.admin.departments.destroy', $department))
+            ->assertRedirect(route('blade.admin.departments.index'));
+
+        $this->assertDatabaseMissing('departments', [
+            'id' => $department->id,
+        ]);
+    }
+
+    public function test_admin_can_manage_expense_categories_from_blade_pages(): void
+    {
+        $adminUser = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($adminUser)
+            ->get(route('blade.admin.expense-categories.index'))
+            ->assertOk()
+            ->assertSee('Expense Categories');
+
+        $this->actingAs($adminUser)
+            ->post(route('blade.admin.expense-categories.store'), [
+                'name' => 'Travel',
+            ])
+            ->assertRedirect(route('blade.admin.expense-categories.index'));
+
+        $category = ExpenseCategory::where('name', 'Travel')->first();
+
+        $this->assertNotNull($category);
+
+        $this->actingAs($adminUser)
+            ->get(route('blade.admin.expense-categories.edit', $category))
+            ->assertOk()
+            ->assertSee('Edit Expense Category');
+
+        $this->actingAs($adminUser)
+            ->put(route('blade.admin.expense-categories.update', $category), [
+                'name' => 'Business Travel',
+            ])
+            ->assertRedirect(route('blade.admin.expense-categories.index'));
+
+        $this->actingAs($adminUser)
+            ->patch(route('blade.admin.expense-categories.deactivate', $category))
+            ->assertRedirect(route('blade.admin.expense-categories.index'));
+
+        $category->refresh();
+
+        $this->assertSame('Business Travel', $category->name);
+        $this->assertFalse($category->is_active);
+
+        $this->actingAs($adminUser)
+            ->delete(route('blade.admin.expense-categories.destroy', $category))
+            ->assertRedirect(route('blade.admin.expense-categories.index'));
+
+        $this->assertDatabaseMissing('expense_categories', [
+            'id' => $category->id,
+        ]);
+    }
+
+    public function test_non_admin_cannot_open_admin_blade_pages(): void
+    {
+        $hrUser = User::factory()->create(['role' => 'hr']);
+
+        $this->actingAs($hrUser)
+            ->get(route('blade.admin.users.index'))
+            ->assertForbidden();
     }
 }

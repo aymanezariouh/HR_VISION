@@ -3,39 +3,22 @@
 @section('title', 'Dashboard | HRVision')
 
 @section('content')
-    <section class="page-head">
+    <section class="dashboard-hero">
         <div>
             <p class="small-label">Dashboard</p>
             <h1>Welcome back, {{ $user->name }}</h1>
-            <p class="muted-text">Your role: {{ ucfirst($user->role) }}</p>
+            <p class="muted-text">Your role: {{ ucfirst($user->role) }}. Use the shortcuts below to continue your work.</p>
         </div>
     </section>
 
     <section class="stats-grid">
-        <article class="stat-card">
-            <span>Employees</span>
-            <strong>{{ $stats['employees'] }}</strong>
-        </article>
-
-        <article class="stat-card">
-            <span>Departments</span>
-            <strong>{{ $stats['departments'] }}</strong>
-        </article>
-
-        <article class="stat-card">
-            <span>Salaries</span>
-            <strong>{{ $stats['salaries'] }}</strong>
-        </article>
-
-        <article class="stat-card">
-            <span>Expenses</span>
-            <strong>{{ $stats['expenses'] }}</strong>
-        </article>
-
-        <article class="stat-card">
-            <span>Documents</span>
-            <strong>{{ $stats['documents'] }}</strong>
-        </article>
+        @foreach($stats as $card)
+            <article class="stat-card">
+                <span>{{ $card['label'] }}</span>
+                <strong>{{ $card['value'] }}</strong>
+                <p>{{ $card['note'] }}</p>
+            </article>
+        @endforeach
     </section>
 
     <section class="content-card">
@@ -53,7 +36,11 @@
                 <a href="{{ route('blade.expenses.index') }}" class="light-button button-link">Expenses</a>
             @endif
 
-            <a href="{{ route('documents.index') }}" class="light-button button-link">Documents</a>
+            @if($user->hasAnyRole(['admin', 'hr']))
+                <a href="{{ route('blade.documents.index') }}" class="light-button button-link">Documents</a>
+            @else
+                <a href="{{ route('blade.documents.mine') }}" class="light-button button-link">Documents</a>
+            @endif
 
             @if($user->hasRole('admin'))
                 <a href="{{ route('admin.index') }}" class="light-button button-link">Admin</a>

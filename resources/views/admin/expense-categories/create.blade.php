@@ -1,0 +1,36 @@
+@extends('layouts.app')
+
+@section('title', 'Create Expense Category | HRVision')
+
+@section('content')
+    <section class="page-head">
+        <div>
+            <p class="small-label">Admin</p>
+            <h1>Create Expense Category</h1>
+            <p class="muted-text">Add a new category for employee expenses.</p>
+        </div>
+
+        <a href="{{ route('blade.admin.expense-categories.index') }}" class="light-button button-link">Back</a>
+    </section>
+
+    @include('admin.partials.nav')
+
+    <section class="content-card">
+        <form method="POST" action="{{ route('blade.admin.expense-categories.store') }}" class="employee-form">
+            @csrf
+
+            <label class="field-block full-field">
+                <span>Category Name</span>
+                <input type="text" name="name" value="{{ old('name') }}">
+                @error('name')
+                    <small class="field-error">{{ $message }}</small>
+                @enderror
+            </label>
+
+            <div class="button-row full-field">
+                <button type="submit" class="main-button">Create Category</button>
+                <a href="{{ route('blade.admin.expense-categories.index') }}" class="light-button button-link">Cancel</a>
+            </div>
+        </form>
+    </section>
+@endsection

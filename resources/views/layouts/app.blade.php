@@ -13,31 +13,42 @@
             <a class="brand" href="{{ route('dashboard') }}">HRVision</a>
 
             <nav class="nav-links">
-                <a href="{{ route('dashboard') }}">Dashboard</a>
+                <a href="{{ route('dashboard') }}" class="{{ request()->routeIs('dashboard') ? 'active-link' : '' }}">Dashboard</a>
 
                 @if($currentUser->hasAnyRole(['admin', 'hr']))
-                    <a href="{{ route('blade.employees.index') }}">Employees</a>
+                    <a href="{{ route('blade.employees.index') }}" class="{{ request()->routeIs('blade.employees.*') ? 'active-link' : '' }}">Employees</a>
                 @endif
 
-                <a href="{{ route('blade.salaries.index') }}">Salaries</a>
+                <a href="{{ route('blade.salaries.index') }}" class="{{ request()->routeIs('blade.salaries.*') ? 'active-link' : '' }}">Salaries</a>
 
                 @if($currentUser->hasAnyRole(['admin', 'hr']))
-                    <a href="{{ route('blade.expenses.pending') }}">Expenses</a>
+                    <a href="{{ route('blade.expenses.pending') }}" class="{{ request()->routeIs('blade.expenses.*') ? 'active-link' : '' }}">Expenses</a>
                 @else
-                    <a href="{{ route('blade.expenses.index') }}">Expenses</a>
+                    <a href="{{ route('blade.expenses.index') }}" class="{{ request()->routeIs('blade.expenses.*') ? 'active-link' : '' }}">Expenses</a>
                 @endif
 
-                <a href="{{ route('documents.index') }}">Documents</a>
+                @if($currentUser->hasAnyRole(['admin', 'hr']))
+                    <a href="{{ route('blade.documents.index') }}" class="{{ request()->routeIs('blade.documents.*') ? 'active-link' : '' }}">Documents</a>
+                @else
+                    <a href="{{ route('blade.documents.mine') }}" class="{{ request()->routeIs('blade.documents.*') ? 'active-link' : '' }}">Documents</a>
+                @endif
 
                 @if($currentUser->hasRole('admin'))
-                    <a href="{{ route('admin.index') }}">Admin</a>
+                    <a href="{{ route('admin.index') }}" class="{{ request()->routeIs('admin.index', 'blade.admin.*') ? 'active-link' : '' }}">Admin</a>
                 @endif
             </nav>
 
-            <form method="POST" action="{{ route('logout') }}">
-                @csrf
-                <button type="submit" class="logout-button">Logout</button>
-            </form>
+            <div class="topbar-actions">
+                <div class="user-chip">
+                    <strong>{{ $currentUser->name }}</strong>
+                    <span>{{ ucfirst($currentUser->role) }}</span>
+                </div>
+
+                <form method="POST" action="{{ route('logout') }}">
+                    @csrf
+                    <button type="submit" class="logout-button">Logout</button>
+                </form>
+            </div>
         </header>
     @endauth
 
@@ -45,6 +56,12 @@
         @if(session('success'))
             <div class="success-box">
                 {{ session('success') }}
+            </div>
+        @endif
+
+        @if(session('error'))
+            <div class="error-box">
+                {{ session('error') }}
             </div>
         @endif
 
