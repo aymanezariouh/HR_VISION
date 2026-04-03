@@ -16,6 +16,9 @@ Route::get('/', fn () => redirect()->route('login'));
 Route::middleware('guest')->group(function (): void {
     Route::get('/login', [BladeAuthController::class, 'showLoginForm'])->name('login');
     Route::post('/login', [BladeAuthController::class, 'login'])->name('login.submit');
+
+    Route::get('/register', [BladeAuthController::class, 'showRegisterForm'])->name('register');
+    Route::post('/register', [BladeAuthController::class, 'register'])->name('register.submit');
 });
 
 Route::middleware('auth')->group(function (): void {

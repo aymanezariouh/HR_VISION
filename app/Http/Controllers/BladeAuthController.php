@@ -51,6 +51,41 @@ class BladeAuthController extends Controller
         return redirect()->route('dashboard');
     }
 
+    public function showRegisterForm(): View|RedirectResponse
+    {
+        if (Auth::check()) {
+            return redirect()->route('dashboard');
+        }
+
+        return view('register');
+    }
+
+    public function register(Request $request): RedirectResponse
+    {
+        $userData = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
+            'phone' => ['nullable', 'string', 'max:20'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+        ]);
+
+        $user = User::query()->create([
+            'name' => $userData['name'],
+            'email' => $userData['email'],
+            'phone' => $userData['phone'] ?? null,
+            'role' => User::ROLE_EMPLOYEE,
+            'password' => $userData['password'],
+            'is_active' => true,
+        ]);
+
+        Auth::login($user);
+        $request->session()->regenerate();
+
+        return redirect()
+            ->route('dashboard')
+            ->with('success', 'Account created successfully.');
+    }
+
     public function logout(Request $request): RedirectResponse
     {
         Auth::logout();

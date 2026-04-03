@@ -27,6 +27,32 @@ class BladeAppTest extends TestCase
         $response->assertSee('Sign in to HRVision');
     }
 
+    public function test_register_page_can_be_opened_and_user_can_create_account(): void
+    {
+        $this->get(route('register'))
+            ->assertOk()
+            ->assertSee('Register');
+
+        $response = $this->post(route('register.submit'), [
+            'name' => 'New Employee',
+            'email' => 'new.registered@example.com',
+            'phone' => '+212600000099',
+            'password' => 'password',
+            'password_confirmation' => 'password',
+        ]);
+
+        $response->assertRedirect(route('dashboard'));
+
+        $this->assertAuthenticated();
+        $this->assertDatabaseHas('users', [
+            'name' => 'New Employee',
+            'email' => 'new.registered@example.com',
+            'phone' => '+212600000099',
+            'role' => User::ROLE_EMPLOYEE,
+            'is_active' => true,
+        ]);
+    }
+
     public function test_user_can_login_with_blade_form_and_open_dashboard(): void
     {
         $user = User::factory()->create([
@@ -333,6 +359,26 @@ class BladeAppTest extends TestCase
         Storage::disk('public')->assertExists($expense->receipt_path);
     }
 
+    public function test_employee_without_profile_gets_error_flash_when_submitting_expense(): void
+    {
+        Storage::fake('public');
+
+        $employeeUser = User::factory()->create(['role' => 'employee']);
+        $category = ExpenseCategory::create(['name' => 'Transport']);
+
+        $response = $this->actingAs($employeeUser)
+            ->post(route('blade.expenses.store'), [
+                'category_id' => $category->id,
+                'amount' => 100,
+                'description' => 'Taxi',
+                'receipt' => UploadedFile::fake()->create('receipt.pdf', 50, 'application/pdf'),
+            ]);
+
+        $response->assertRedirect(route('blade.expenses.index'));
+        $response->assertSessionHas('error', 'Employee profile not found.');
+        $this->assertDatabaseCount('expenses', 0);
+    }
+
     public function test_employee_can_view_only_their_own_expense_history_in_blade(): void
     {
         $department = Department::create(['name' => 'Support']);
@@ -585,6 +631,38 @@ class BladeAppTest extends TestCase
         $this->assertDatabaseHas('users', [
             'id' => $targetUser->id,
             'is_active' => false,
+        ]);
+    }
+
+    public function test_admin_cannot_remove_their_own_admin_role_or_deactivate_their_own_account(): void
+    {
+        $adminUser = User::factory()->create([
+            'role' => 'admin',
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($adminUser)
+            ->patch(route('blade.admin.users.update', $adminUser), [
+                'role' => 'hr',
+            ])
+            ->assertRedirect(route('blade.admin.users.edit', $adminUser))
+            ->assertSessionHas('error', 'You cannot remove your own admin role.');
+
+        $this->assertDatabaseHas('users', [
+            'id' => $adminUser->id,
+            'role' => 'admin',
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($adminUser)
+            ->patch(route('blade.admin.users.deactivate', $adminUser))
+            ->assertRedirect(route('blade.admin.users.index'))
+            ->assertSessionHas('error', 'You cannot deactivate your own account.');
+
+        $this->assertDatabaseHas('users', [
+            'id' => $adminUser->id,
+            'role' => 'admin',
+            'is_active' => true,
         ]);
     }
 

@@ -33,6 +33,12 @@ class BladeAdminUserController extends Controller
 
     public function update(UpdateUserRoleRequest $request, User $user): RedirectResponse
     {
+        if ($user->is($request->user()) && $request->validated('role') !== User::ROLE_ADMIN) {
+            return redirect()
+                ->route('blade.admin.users.edit', $user)
+                ->with('error', 'You cannot remove your own admin role.');
+        }
+
         $user->update($request->validated());
 
         return redirect()
@@ -42,6 +48,12 @@ class BladeAdminUserController extends Controller
 
     public function deactivate(User $user): RedirectResponse
     {
+        if ($user->is(request()->user())) {
+            return redirect()
+                ->route('blade.admin.users.index')
+                ->with('error', 'You cannot deactivate your own account.');
+        }
+
         if ($user->is_active) {
             $user->update(['is_active' => false]);
             $user->tokens()->delete();

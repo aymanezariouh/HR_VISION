@@ -12,10 +12,11 @@ class ExpenseCategorySeeder extends Seeder
      */
     public function run(): void
     {
-        foreach (['Travel', 'Meals', 'Office Supplies', 'Training'] as $name) {
-            ExpenseCategory::query()->firstOrCreate([
-                'name' => $name,
-            ]);
+        foreach (['Transport', 'Food', 'Equipment'] as $name) {
+            ExpenseCategory::query()->updateOrCreate(
+                ['name' => $name],
+                ['is_active' => true]
+            );
         }
     }
 }

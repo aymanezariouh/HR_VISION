@@ -48,7 +48,11 @@
                                         <form method="POST" action="{{ route('blade.admin.users.deactivate', $user) }}">
                                             @csrf
                                             @method('PATCH')
-                                            <button type="submit" class="danger-button" @disabled(!$user->is_active)>
+                                            <button
+                                                type="submit"
+                                                class="danger-button"
+                                                @disabled(!$user->is_active || auth()->id() === $user->id)
+                                            >
                                                 Deactivate
                                             </button>
                                         </form>

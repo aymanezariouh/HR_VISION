@@ -51,7 +51,7 @@ class BladeExpenseController extends Controller
         if (! $employee) {
             return redirect()
                 ->route('blade.expenses.index')
-                ->with('success', 'Employee profile not found.');
+                ->with('error', 'Employee profile not found.');
         }
 
         Expense::query()->create([
