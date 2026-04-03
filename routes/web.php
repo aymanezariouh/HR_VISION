@@ -3,6 +3,7 @@
 use App\Http\Controllers\BladeAuthController;
 use App\Http\Controllers\BladeDashboardController;
 use App\Http\Controllers\BladeEmployeeController;
+use App\Http\Controllers\BladeExpenseController;
 use App\Http\Controllers\BladeModuleController;
 use App\Http\Controllers\BladeSalaryController;
 use Illuminate\Support\Facades\Route;
@@ -41,10 +42,23 @@ Route::middleware('auth')->group(function (): void {
 
         Route::post('/salaries', [BladeSalaryController::class, 'store'])
             ->name('blade.salaries.store');
+
+        Route::get('/expenses/pending', [BladeExpenseController::class, 'pending'])
+            ->name('blade.expenses.pending');
+        Route::patch('/expenses/{expense}/approve', [BladeExpenseController::class, 'approve'])
+            ->name('blade.expenses.approve');
+        Route::patch('/expenses/{expense}/reject', [BladeExpenseController::class, 'reject'])
+            ->name('blade.expenses.reject');
     });
 
     Route::get('/salaries', [BladeSalaryController::class, 'index'])->name('blade.salaries.index');
-    Route::get('/expenses', [BladeModuleController::class, 'expenses'])->name('expenses.index');
+    Route::get('/expenses', [BladeExpenseController::class, 'index'])->name('blade.expenses.index');
+    Route::get('/expenses/create', [BladeExpenseController::class, 'create'])
+        ->middleware('role:employee')
+        ->name('blade.expenses.create');
+    Route::post('/expenses', [BladeExpenseController::class, 'store'])
+        ->middleware('role:employee')
+        ->name('blade.expenses.store');
     Route::get('/documents', [BladeModuleController::class, 'documents'])->name('documents.index');
 
     Route::middleware('role:admin')->group(function (): void {

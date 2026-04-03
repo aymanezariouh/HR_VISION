@@ -46,7 +46,13 @@
             @endif
 
             <a href="{{ route('blade.salaries.index') }}" class="light-button button-link">Salaries</a>
-            <a href="{{ route('expenses.index') }}" class="light-button button-link">Expenses</a>
+
+            @if($user->hasAnyRole(['admin', 'hr']))
+                <a href="{{ route('blade.expenses.pending') }}" class="light-button button-link">Expenses</a>
+            @else
+                <a href="{{ route('blade.expenses.index') }}" class="light-button button-link">Expenses</a>
+            @endif
+
             <a href="{{ route('documents.index') }}" class="light-button button-link">Documents</a>
 
             @if($user->hasRole('admin'))

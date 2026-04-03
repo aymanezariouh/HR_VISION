@@ -20,7 +20,13 @@
                 @endif
 
                 <a href="{{ route('blade.salaries.index') }}">Salaries</a>
-                <a href="{{ route('expenses.index') }}">Expenses</a>
+
+                @if($currentUser->hasAnyRole(['admin', 'hr']))
+                    <a href="{{ route('blade.expenses.pending') }}">Expenses</a>
+                @else
+                    <a href="{{ route('blade.expenses.index') }}">Expenses</a>
+                @endif
+
                 <a href="{{ route('documents.index') }}">Documents</a>
 
                 @if($currentUser->hasRole('admin'))

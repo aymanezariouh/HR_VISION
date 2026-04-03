@@ -67,6 +67,11 @@ a {
     font-weight: 700;
 }
 
+.text-link {
+    color: #1f8075;
+    font-weight: 700;
+}
+
 .logout-button,
 .main-button,
 .light-button,
@@ -322,6 +327,21 @@ h1 {
 }
 
 .status-badge.inactive {
+    background: #fdf0ea;
+    color: #b13c21;
+}
+
+.status-badge.pending {
+    background: #fff6e8;
+    color: #9a5b10;
+}
+
+.status-badge.approved {
+    background: #e8f8f0;
+    color: #1b6b4e;
+}
+
+.status-badge.rejected {
     background: #fdf0ea;
     color: #b13c21;
 }

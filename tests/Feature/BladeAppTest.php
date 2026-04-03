@@ -4,10 +4,14 @@ namespace Tests\Feature;
 
 use App\Models\Department;
 use App\Models\Employee;
+use App\Models\Expense;
+use App\Models\ExpenseCategory;
 use App\Models\Salary;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class BladeAppTest extends TestCase
@@ -258,5 +262,150 @@ class BladeAppTest extends TestCase
             ->assertSee('3,050.00')
             ->assertDontSee('Other Employee')
             ->assertDontSee('9,000.00');
+    }
+
+    public function test_employee_can_submit_expense_from_blade_page(): void
+    {
+        Storage::fake('public');
+
+        $employeeUser = User::factory()->create(['role' => 'employee']);
+        $department = Department::create(['name' => 'Operations']);
+        Employee::create([
+            'user_id' => $employeeUser->id,
+            'department_id' => $department->id,
+            'name' => 'Expense Employee',
+            'professional_email' => 'expense.employee@example.com',
+            'phone' => '+212600000007',
+            'address' => 'Rabat',
+            'position' => 'Coordinator',
+            'hire_date' => '2026-04-01',
+            'contract_type' => 'cdi',
+            'status' => 'active',
+        ]);
+        $category = ExpenseCategory::create(['name' => 'Transport']);
+
+        $this->actingAs($employeeUser)
+            ->get(route('blade.expenses.create'))
+            ->assertOk()
+            ->assertSee('Submit Expense');
+
+        $this->actingAs($employeeUser)
+            ->post(route('blade.expenses.store'), [
+                'category_id' => $category->id,
+                'amount' => 180.50,
+                'description' => 'Taxi to client office',
+                'receipt' => UploadedFile::fake()->create('receipt.pdf', 100, 'application/pdf'),
+            ])
+            ->assertRedirect(route('blade.expenses.index'));
+
+        $expense = Expense::first();
+
+        $this->assertNotNull($expense);
+        $this->assertSame(Expense::STATUS_PENDING, $expense->status);
+        Storage::disk('public')->assertExists($expense->receipt_path);
+    }
+
+    public function test_employee_can_view_only_their_own_expense_history_in_blade(): void
+    {
+        $department = Department::create(['name' => 'Support']);
+        $category = ExpenseCategory::create(['name' => 'Meals']);
+
+        $employeeUser = User::factory()->create(['role' => 'employee']);
+        $employee = Employee::create([
+            'user_id' => $employeeUser->id,
+            'department_id' => $department->id,
+            'name' => 'Own Expense Employee',
+            'professional_email' => 'own.expense@example.com',
+            'phone' => '+212600000008',
+            'address' => 'Casablanca',
+            'position' => 'Agent',
+            'hire_date' => '2026-04-01',
+            'contract_type' => 'cdi',
+            'status' => 'active',
+        ]);
+
+        $otherEmployee = Employee::create([
+            'user_id' => User::factory()->create(['role' => 'employee'])->id,
+            'department_id' => $department->id,
+            'name' => 'Other Expense Employee',
+            'professional_email' => 'other.expense@example.com',
+            'phone' => '+212600000009',
+            'address' => 'Casablanca',
+            'position' => 'Agent',
+            'hire_date' => '2026-04-01',
+            'contract_type' => 'cdi',
+            'status' => 'active',
+        ]);
+
+        Expense::create([
+            'employee_id' => $employee->id,
+            'category_id' => $category->id,
+            'amount' => 75,
+            'description' => 'Own lunch',
+            'receipt_path' => 'expense-receipts/own.jpg',
+            'status' => Expense::STATUS_PENDING,
+            'submitted_at' => now(),
+        ]);
+
+        Expense::create([
+            'employee_id' => $otherEmployee->id,
+            'category_id' => $category->id,
+            'amount' => 999,
+            'description' => 'Other lunch',
+            'receipt_path' => 'expense-receipts/other.jpg',
+            'status' => Expense::STATUS_PENDING,
+            'submitted_at' => now(),
+        ]);
+
+        $this->actingAs($employeeUser)
+            ->get(route('blade.expenses.index'))
+            ->assertOk()
+            ->assertSee('Own lunch')
+            ->assertSee('75.00')
+            ->assertDontSee('Other lunch')
+            ->assertDontSee('999.00');
+    }
+
+    public function test_hr_can_approve_pending_expense_from_blade_page(): void
+    {
+        $hrUser = User::factory()->create(['role' => 'hr']);
+        $department = Department::create(['name' => 'Sales']);
+        $employee = Employee::create([
+            'user_id' => User::factory()->create(['role' => 'employee'])->id,
+            'department_id' => $department->id,
+            'name' => 'Pending Expense Employee',
+            'professional_email' => 'pending.expense@example.com',
+            'phone' => '+212600000010',
+            'address' => 'Marrakech',
+            'position' => 'Sales Rep',
+            'hire_date' => '2026-04-01',
+            'contract_type' => 'cdi',
+            'status' => 'active',
+        ]);
+        $category = ExpenseCategory::create(['name' => 'Travel']);
+        $expense = Expense::create([
+            'employee_id' => $employee->id,
+            'category_id' => $category->id,
+            'amount' => 220,
+            'description' => 'Client visit',
+            'receipt_path' => 'expense-receipts/travel.pdf',
+            'status' => Expense::STATUS_PENDING,
+            'submitted_at' => now(),
+        ]);
+
+        $this->actingAs($hrUser)
+            ->get(route('blade.expenses.pending'))
+            ->assertOk()
+            ->assertSee('Pending Expenses')
+            ->assertSee('Client visit');
+
+        $this->actingAs($hrUser)
+            ->patch(route('blade.expenses.approve', $expense))
+            ->assertRedirect(route('blade.expenses.pending'));
+
+        $this->assertDatabaseHas('expenses', [
+            'id' => $expense->id,
+            'status' => Expense::STATUS_APPROVED,
+        ]);
     }
 }
