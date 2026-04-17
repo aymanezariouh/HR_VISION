@@ -9,6 +9,7 @@ use App\Http\Controllers\BladeDocumentController;
 use App\Http\Controllers\BladeEmployeeController;
 use App\Http\Controllers\BladeExpenseController;
 use App\Http\Controllers\BladeSalaryController;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => redirect()->route('login'));
@@ -82,17 +83,24 @@ Route::middleware('auth')->group(function (): void {
         ->name('blade.documents.download');
 
     Route::middleware('role:admin')->group(function (): void {
-        Route::get('/admin', fn () => redirect()->route('blade.admin.users.index'))
-            ->name('admin.index');
+        Route::get('/admin', function (Request $request) {
+            return redirect()->route(
+                $request->user()->isSuperAdmin()
+                    ? 'blade.admin.users.index'
+                    : 'blade.admin.departments.index'
+            );
+        })->name('admin.index');
 
-        Route::get('/admin/users', [BladeAdminUserController::class, 'index'])
-            ->name('blade.admin.users.index');
-        Route::get('/admin/users/{user}/edit', [BladeAdminUserController::class, 'edit'])
-            ->name('blade.admin.users.edit');
-        Route::patch('/admin/users/{user}', [BladeAdminUserController::class, 'update'])
-            ->name('blade.admin.users.update');
-        Route::patch('/admin/users/{user}/deactivate', [BladeAdminUserController::class, 'deactivate'])
-            ->name('blade.admin.users.deactivate');
+        Route::middleware('super_admin')->group(function (): void {
+            Route::get('/admin/users', [BladeAdminUserController::class, 'index'])
+                ->name('blade.admin.users.index');
+            Route::get('/admin/users/{user}/edit', [BladeAdminUserController::class, 'edit'])
+                ->name('blade.admin.users.edit');
+            Route::patch('/admin/users/{user}', [BladeAdminUserController::class, 'update'])
+                ->name('blade.admin.users.update');
+            Route::patch('/admin/users/{user}/deactivate', [BladeAdminUserController::class, 'deactivate'])
+                ->name('blade.admin.users.deactivate');
+        });
 
         Route::resource('/admin/departments', BladeAdminDepartmentController::class)
             ->only(['index', 'create', 'store', 'edit', 'update', 'destroy'])

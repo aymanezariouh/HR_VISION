@@ -595,7 +595,7 @@ class BladeAppTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_admin_can_update_and_deactivate_users_from_blade_pages(): void
+    public function test_super_admin_can_update_and_deactivate_users_from_blade_pages(): void
     {
         $adminUser = User::factory()->create(['role' => 'admin']);
         $targetUser = User::factory()->create([
@@ -634,7 +634,7 @@ class BladeAppTest extends TestCase
         ]);
     }
 
-    public function test_admin_cannot_remove_their_own_admin_role_or_deactivate_their_own_account(): void
+    public function test_super_admin_cannot_remove_their_own_role_or_deactivate_their_own_account(): void
     {
         $adminUser = User::factory()->create([
             'role' => 'admin',
@@ -646,7 +646,7 @@ class BladeAppTest extends TestCase
                 'role' => 'hr',
             ])
             ->assertRedirect(route('blade.admin.users.edit', $adminUser))
-            ->assertSessionHas('error', 'You cannot remove your own admin role.');
+            ->assertSessionHas('error', 'Admin #1 role cannot be changed.');
 
         $this->assertDatabaseHas('users', [
             'id' => $adminUser->id,
@@ -657,7 +657,7 @@ class BladeAppTest extends TestCase
         $this->actingAs($adminUser)
             ->patch(route('blade.admin.users.deactivate', $adminUser))
             ->assertRedirect(route('blade.admin.users.index'))
-            ->assertSessionHas('error', 'You cannot deactivate your own account.');
+            ->assertSessionHas('error', 'Admin #1 cannot be deactivated.');
 
         $this->assertDatabaseHas('users', [
             'id' => $adminUser->id,
@@ -769,5 +769,19 @@ class BladeAppTest extends TestCase
         $this->actingAs($hrUser)
             ->get(route('blade.admin.users.index'))
             ->assertForbidden();
+    }
+
+    public function test_regular_admin_cannot_open_super_admin_user_management_pages(): void
+    {
+        User::factory()->create(['role' => 'admin']);
+        $regularAdmin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($regularAdmin)
+            ->get(route('blade.admin.users.index'))
+            ->assertForbidden();
+
+        $this->actingAs($regularAdmin)
+            ->get(route('admin.index'))
+            ->assertRedirect(route('blade.admin.departments.index'));
     }
 }

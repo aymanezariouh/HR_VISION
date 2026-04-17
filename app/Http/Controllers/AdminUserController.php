@@ -42,6 +42,14 @@ class AdminUserController extends Controller
 
     public function update(UpdateUserRoleRequest $request, User $user): JsonResponse
     {
+        if (! $request->user()->isSuperAdmin()) {
+            return $this->errorResponse('Only the super admin can change user roles.', null, 403);
+        }
+
+        if ($user->isRootAdmin()) {
+            return $this->errorResponse('Admin #1 role cannot be changed.', null, 403);
+        }
+
         $user->update($request->validated());
 
         return $this->userResponse($user->fresh(), 'User role updated successfully.');
@@ -49,6 +57,14 @@ class AdminUserController extends Controller
 
     public function deactivate(User $user): JsonResponse
     {
+        if (! request()->user()->isSuperAdmin()) {
+            return $this->errorResponse('Only the super admin can deactivate admin-managed users.', null, 403);
+        }
+
+        if ($user->isRootAdmin()) {
+            return $this->errorResponse('Admin #1 cannot be deactivated.', null, 403);
+        }
+
         if (! $user->is_active) {
             return $this->userResponse($user, 'User account is already inactive.');
         }

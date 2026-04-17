@@ -18,6 +18,8 @@ class User extends Authenticatable
     public const ROLE_ADMIN = 'admin';
     public const ROLE_HR = 'hr';
     public const ROLE_EMPLOYEE = 'employee';
+    public const SUPER_ADMIN_ID = 1;
+    public const ROOT_ADMIN_ID = self::SUPER_ADMIN_ID;
 
     /**
      * The model's default values for attributes.
@@ -73,6 +75,10 @@ class User extends Authenticatable
 
     public function hasRole(string $role): bool
     {
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+
         return $this->role === $role;
     }
 
@@ -83,6 +89,39 @@ class User extends Authenticatable
      */
     public function hasAnyRole(array $roles): bool
     {
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+
         return in_array($this->role, $roles, true);
+    }
+
+    public function isSuperAdmin(): bool
+    {
+        return $this->id === self::SUPER_ADMIN_ID && $this->role === self::ROLE_ADMIN;
+    }
+
+    public function isRootAdmin(): bool
+    {
+        return $this->isSuperAdmin();
+    }
+
+    protected static function booted(): void
+    {
+        static::saving(function (User $user): void {
+            if ($user->id !== self::SUPER_ADMIN_ID) {
+                return;
+            }
+
+            $wasSuperAdmin = $user->exists && $user->getOriginal('role') === self::ROLE_ADMIN;
+            $isBeingCreatedAsSuperAdmin = ! $user->exists && $user->role === self::ROLE_ADMIN;
+
+            if (! ($wasSuperAdmin || $isBeingCreatedAsSuperAdmin)) {
+                return;
+            }
+
+            $user->role = self::ROLE_ADMIN;
+            $user->is_active = true;
+        });
     }
 }

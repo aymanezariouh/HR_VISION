@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\RoleMiddleware;
+use App\Http\Middleware\SuperAdminMiddleware;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
@@ -23,14 +24,21 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->statefulApi();
         $middleware->alias([
             'role' => RoleMiddleware::class,
+            'super_admin' => SuperAdminMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        $exceptions->shouldRenderJsonWhen(function (Request $request): bool {
+        $shouldReturnJson = static function (Request $request): bool {
             return $request->is('api/*') || $request->expectsJson();
-        });
+        };
 
-        $exceptions->render(function (ValidationException $exception, Request $request): Response {
+        $exceptions->shouldRenderJsonWhen($shouldReturnJson);
+
+        $exceptions->render(function (ValidationException $exception, Request $request) {
+            if (! ($request->is('api/*') || $request->expectsJson())) {
+                return null;
+            }
+
             return response()->json([
                 'success' => false,
                 'message' => 'The given data was invalid.',
@@ -39,6 +47,10 @@ return Application::configure(basePath: dirname(__DIR__))
         });
 
         $exceptions->render(function (AuthenticationException $exception, Request $request): Response {
+            if (! ($request->is('api/*') || $request->expectsJson())) {
+                return redirect()->guest(route('login'));
+            }
+
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthenticated.',
@@ -46,7 +58,11 @@ return Application::configure(basePath: dirname(__DIR__))
             ], Response::HTTP_UNAUTHORIZED);
         });
 
-        $exceptions->render(function (AuthorizationException $exception, Request $request): Response {
+        $exceptions->render(function (AuthorizationException $exception, Request $request) {
+            if (! ($request->is('api/*') || $request->expectsJson())) {
+                return null;
+            }
+
             return response()->json([
                 'success' => false,
                 'message' => $exception->getMessage() ?: 'This action is unauthorized.',
@@ -54,7 +70,11 @@ return Application::configure(basePath: dirname(__DIR__))
             ], Response::HTTP_FORBIDDEN);
         });
 
-        $exceptions->render(function (NotFoundHttpException $exception, Request $request): Response {
+        $exceptions->render(function (NotFoundHttpException $exception, Request $request) {
+            if (! ($request->is('api/*') || $request->expectsJson())) {
+                return null;
+            }
+
             return response()->json([
                 'success' => false,
                 'message' => 'Resource not found.',
@@ -62,7 +82,11 @@ return Application::configure(basePath: dirname(__DIR__))
             ], Response::HTTP_NOT_FOUND);
         });
 
-        $exceptions->render(function (HttpExceptionInterface $exception, Request $request): Response {
+        $exceptions->render(function (HttpExceptionInterface $exception, Request $request) {
+            if (! ($request->is('api/*') || $request->expectsJson())) {
+                return null;
+            }
+
             $status = $exception->getStatusCode();
 
             return response()->json([
@@ -72,7 +96,11 @@ return Application::configure(basePath: dirname(__DIR__))
             ], $status);
         });
 
-        $exceptions->render(function (\Throwable $exception, Request $request): Response {
+        $exceptions->render(function (\Throwable $exception, Request $request) {
+            if (! ($request->is('api/*') || $request->expectsJson())) {
+                return null;
+            }
+
             return response()->json([
                 'success' => false,
                 'message' => config('app.debug') ? $exception->getMessage() : 'Server error.',

@@ -35,7 +35,7 @@
                                 <td>{{ $user->name }}</td>
                                 <td>{{ $user->email }}</td>
                                 <td>{{ $user->phone ?: 'N/A' }}</td>
-                                <td>{{ $user->role }}</td>
+                                <td>{{ $user->isSuperAdmin() ? 'super_admin' : $user->role }}</td>
                                 <td>
                                     <span class="status-badge {{ $user->is_active ? 'active' : 'inactive' }}">
                                         {{ $user->is_active ? 'active' : 'inactive' }}
@@ -51,7 +51,7 @@
                                             <button
                                                 type="submit"
                                                 class="danger-button"
-                                                @disabled(!$user->is_active || auth()->id() === $user->id)
+                                                @disabled(!$user->is_active || auth()->id() === $user->id || $user->isSuperAdmin())
                                             >
                                                 Deactivate
                                             </button>

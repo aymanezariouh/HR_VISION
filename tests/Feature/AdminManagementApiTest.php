@@ -15,9 +15,9 @@ class AdminManagementApiTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_admin_can_list_view_update_and_deactivate_users(): void
+    public function test_super_admin_can_list_view_update_and_deactivate_users(): void
     {
-        $adminUser = User::factory()->create([
+        $superAdmin = User::factory()->create([
             'role' => User::ROLE_ADMIN,
         ]);
         $employeeUser = User::factory()->create([
@@ -27,7 +27,7 @@ class AdminManagementApiTest extends TestCase
 
         $employee = $this->createEmployee($employeeUser);
 
-        $adminToken = $adminUser->createToken('admin-token')->plainTextToken;
+        $adminToken = $superAdmin->createToken('admin-token')->plainTextToken;
         $employeeUser->createToken('employee-token')->plainTextToken;
 
         $this->withHeader('Authorization', 'Bearer '.$adminToken)
@@ -251,6 +251,24 @@ class AdminManagementApiTest extends TestCase
             ->assertForbidden()
             ->assertJsonPath('success', false)
             ->assertJsonPath('message', 'You are not authorized to access this resource.');
+    }
+
+    public function test_regular_admin_cannot_access_super_admin_user_management_endpoints(): void
+    {
+        User::factory()->create([
+            'role' => User::ROLE_ADMIN,
+        ]);
+
+        $regularAdmin = User::factory()->create([
+            'role' => User::ROLE_ADMIN,
+        ]);
+
+        Sanctum::actingAs($regularAdmin);
+
+        $this->getJson('/api/admin/users')
+            ->assertForbidden()
+            ->assertJsonPath('success', false)
+            ->assertJsonPath('message', 'Only the super admin can access this resource.');
     }
 
     private function createEmployee(?User $user = null, ?Department $department = null): Employee

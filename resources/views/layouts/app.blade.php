@@ -111,11 +111,11 @@
                 <div class="topbar-actions">
                     <div class="user-chip">
                         <div class="user-avatar">{{ strtoupper(substr($currentUser->name, 0, 1)) }}</div>
-                        <div class="user-meta">
-                            <strong>{{ $currentUser->name }}</strong>
-                            <span>{{ ucfirst($currentUser->role) }}</span>
-                        </div>
+                    <div class="user-meta">
+                        <strong>{{ $currentUser->name }}</strong>
+                            <span>{{ $currentUser->isSuperAdmin() ? 'Super Admin' : ucfirst($currentUser->role) }}</span>
                     </div>
+                </div>
 
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf

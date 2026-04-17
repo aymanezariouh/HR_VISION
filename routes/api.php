@@ -25,10 +25,14 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::prefix('admin')->middleware('role:admin')->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'admin']);
-        Route::get('/users', [AdminUserController::class, 'index']);
-        Route::get('/users/{user}', [AdminUserController::class, 'show']);
-        Route::patch('/users/{user}', [AdminUserController::class, 'update']);
-        Route::patch('/users/{user}/deactivate', [AdminUserController::class, 'deactivate']);
+
+        Route::middleware('super_admin')->group(function () {
+            Route::get('/users', [AdminUserController::class, 'index']);
+            Route::get('/users/{user}', [AdminUserController::class, 'show']);
+            Route::patch('/users/{user}', [AdminUserController::class, 'update']);
+            Route::patch('/users/{user}/deactivate', [AdminUserController::class, 'deactivate']);
+        });
+
         Route::get('/departments', [AdminDepartmentController::class, 'index']);
         Route::post('/departments', [AdminDepartmentController::class, 'store']);
         Route::patch('/departments/{department}', [AdminDepartmentController::class, 'update']);

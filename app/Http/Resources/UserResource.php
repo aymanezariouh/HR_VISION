@@ -20,6 +20,7 @@ class UserResource extends JsonResource
             'email' => $this->email,
             'phone' => $this->phone,
             'role' => $this->role,
+            'is_super_admin' => $this->isSuperAdmin(),
             'is_active' => $this->is_active,
             'employee' => $this->whenLoaded('employee', fn (): array => [
                 'id' => $this->employee->id,
