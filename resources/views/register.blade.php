@@ -6,7 +6,7 @@
     <title>Register | HRVision</title>
     <link rel="stylesheet" href="{{ asset('css/hrvision.css') }}?v={{ filemtime(public_path('css/hrvision.css')) }}">
 </head>
-<body class="auth-body">
+<body class="auth-body auth-scroll-page">
     <main class="auth-page">
         <section class="auth-shell">
             <div class="auth-form-panel">

@@ -52,7 +52,7 @@ class UsersSeeder extends Seeder
             ],
         ];
 
-        foreach ($users as $userData) {
+            foreach ($users as $userData) {
             User::query()->updateOrCreate(
                 ['email' => $userData['email']],
                 [
